@@ -4,18 +4,18 @@ from datetime import datetime
 import psycopg2
 import os
 
-#POSTGRES = {
-#    'user': 'postgres',
-#    'pw': 'postgres1234',
-#    'db': 'blogflask',
-#    'host': 'localhost',
-#    'port': '5432',
-#}
+POSTGRES = {
+    'user': 'postgres',
+    'pw': 'postgres1234',
+    'db': 'blogflask',
+    'host': 'localhost',
+    'port': '5432',
+}
 
 app = Flask(__name__) # create the application instance
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:%(pw)s@%(host)s:%(port)s/%(db)s' % POSTGRES # load config from this file
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:%(pw)s@%(host)s:%(port)s/%(db)s' % POSTGRES # load config from this file
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+#app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 
 db = SQLAlchemy(app)
 
