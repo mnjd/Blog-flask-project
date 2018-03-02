@@ -19,6 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:%(pw)s@%(host)s:%
 
 db = SQLAlchemy(app)
 
+
 class Postblog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(50))
@@ -59,28 +60,26 @@ def create_post():
     db.session.commit()
     return redirect(url_for('list_articles'))
 
-'''
 @app.route("/editpost/<int:id>", methods=['GET', 'POST'])
 def edit_post(id):
-    post = Postblog.query.filter_by(id=id).first()
-    form = Postblog()
+    post = db.session.query(Postblog).filter(Postblog.id==id).first()
+    
     if request.method == 'POST':
         title = request.form['title']
         subtitle = request.form['subtitle']
         author = request.form['author']
         text = request.form['text']
-
+        
         post.title = title
         post.subtitle = subtitle
         post.author = author
         post.text = text
 
         db.session.commit()
-        
+
         return redirect(url_for('list_articles'))
-    else:
+    elif request.method == 'GET':
         return render_template('editarticle.html', post=post)
-'''
 
 @app.route("/deletepost/<int:id>", methods=['POST'])
 def delete_post(id):
@@ -91,4 +90,3 @@ def delete_post(id):
 
 if __name__ == "__main__":
     app.run(debug=True)
-    csrf.init_app(app)
