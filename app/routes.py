@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_marshmallow import Marshmallow
 from datetime import datetime
 import psycopg2
 import os
@@ -16,7 +17,7 @@ app = Flask(__name__) # create the application instance
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:%(pw)s@%(host)s:%(port)s/%(db)s' % POSTGRES # load config from this file
 
 db = SQLAlchemy(app)
-
+ma = Marshmallow(app)
 
 class Postblog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -34,6 +35,19 @@ class Weatherdb(db.Model):
     pressure = db.Column(db.Integer)
     temperature_ressentie = db.Column(db.Integer)
     description = db.Column(db.String(50))
+
+class PostListAPIView(ma.Schema):
+    class Meta:
+        fields = ('id', 'title', 'subtitle', 'author', 'text', 'created_at')
+
+postlist = PostListAPIView()
+postlist = PostListAPIView(many=True)
+
+@app.route('/api/v1.0/posts/', methods=['GET'])
+def get_posts():
+    queryset = Postblog.query.all()
+    posts = postlist.dump(queryset)
+    return jsonify(posts.data)
 
 @app.route("/")
 def list_articles():
