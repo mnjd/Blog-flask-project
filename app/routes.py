@@ -15,8 +15,6 @@ POSTGRES = {
 app = Flask(__name__) # create the application instance
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:%(pw)s@%(host)s:%(port)s/%(db)s' % POSTGRES # load config from this file
 
-#app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-
 db = SQLAlchemy(app)
 
 
@@ -32,13 +30,12 @@ class Postblog(db.Model):
 @app.route("/")
 def list_articles():
     posts = Postblog.query.all()
-    #created_at = post.created_at.strftime('%B %d, %Y at %H:%M:%S')
     return render_template('listarticles.html', posts=posts)
 
 @app.route("/detailarticles/<int:pk>")
 def detail_articles(pk):
     post = Postblog.query.filter_by(id=pk).one()
-#    created_at = post.created_at.strftime('%B %d, %Y at %H:%M:%S')
+    post.created_at = "{:%b %d, %Y %H:%M}".format(post.created_at)
     return render_template('detailarticles.html', post=post)
 
 @app.route("/createarticle/")
@@ -51,9 +48,8 @@ def create_post():
     subtitle = request.form['subtitle']
     author = request.form['author']
     text = request.form['text']
-    #created_at = datetime.now().strftime('%B %d, %Y at %H:%M:%S')
     created_at = datetime.now().strftime('%B %d, %Y at %H:%M:%S')
-
+    
     post = Postblog(title=title, subtitle=subtitle, author=author, text=text, created_at=created_at)
 
     db.session.add(post)
