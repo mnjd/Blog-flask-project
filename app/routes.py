@@ -26,11 +26,20 @@ class Postblog(db.Model):
     text = db.Column(db.Text)
     created_at = db.Column(db.DateTime)
 
+class Weatherdb(db.Model):
+    dateandtime = db.Column(db.DateTime, primary_key=True)
+    city = db.Column(db.String(50))
+    temperature = db.Column(db.Integer)
+    humidity =  db.Column(db.Integer)
+    pressure = db.Column(db.Integer)
+    temperature_ressentie = db.Column(db.Integer)
+    description = db.Column(db.String(50))
 
 @app.route("/")
 def list_articles():
     posts = Postblog.query.all()
-    return render_template('listarticles.html', posts=posts)
+    weather = Weatherdb.query.order_by(Weatherdb.dateandtime.desc()).first()
+    return render_template('listarticles.html', posts=posts, weather=weather)
 
 @app.route("/detailarticles/<int:pk>")
 def detail_articles(pk):
