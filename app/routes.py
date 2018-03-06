@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from datetime import datetime
+import redis
 
 POSTGRES = {
     'user': 'postgres',
@@ -60,8 +61,12 @@ def get_posts():
 @app.route("/")
 def list_articles():
     posts = Postblog.query.all()
-    weather = Weatherdb.query.order_by(Weatherdb.dateandtime.desc()).first()
-    return render_template('listarticles.html', posts=posts, weather=weather)
+    r = redis.StrictRedis(host='localhost', port=6379, db=0, charset="utf-8", decode_responses=True)
+    temperature = r.get('temperature')
+    city = r.get('city')
+    apparent_temperature = r.get('apparent_temp')
+    description = r.get('description')
+    return render_template('listarticles.html', posts=posts, temperature=temperature, city=city, apparent_temperature=apparent_temperature, description=description)
 
 
 @app.route("/detailarticles/<int:pk>")

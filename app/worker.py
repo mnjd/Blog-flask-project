@@ -1,14 +1,15 @@
 import os
-import psycopg2
 import redis
 from rq import Worker, Queue, Connection
 
 listen = ['high', 'default', 'low']
 
-DATABASE_URL = os.environ['DATABASE_URL']
-conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+redis_url = os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
+
+conn = redis.from_url(redis_url)
 
 
 if __name__ == '__main__':
-    worker = Worker(map(Queue, listen))
-    worker.work()
+    with Connection(conn):
+        worker = Worker(map(Queue, listen))
+        worker.work()
