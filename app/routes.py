@@ -3,9 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from urllib.parse import urlparse, urljoin
-from passlib.hash import sha256_crypt
 from flask_wtf import FlaskForm
-from flask_bootstrap import Bootstrap
 from wtforms import StringField, PasswordField, BooleanField
 from wtforms.validators import InputRequired, Email, Length
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -25,7 +23,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:%(pw)s@%(host)\
                                         s:%(port)s/%(db)s' % POSTGRES
 app.config['SECRET_KEY'] = 'thisissecret'
 app.config['USE_SESSION_FOR_NEXT'] = True
-Bootstrap(app)
+
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
 login_manager = LoginManager()
