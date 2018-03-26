@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from urllib.parse import urlparse, urljoin
 from datetime import datetime
 import redis
 
@@ -17,11 +18,13 @@ app = Flask(__name__)  # create the application instance
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:%(pw)s@%(host)\
                                         s:%(port)s/%(db)s' % POSTGRES
 app.config['SECRET_KEY'] = 'thisissecret'
+app.config['USE_SESSION_FOR_NEXT'] = True
 
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 class Postblog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -78,9 +81,40 @@ def list_articles():
     description = r.get('description')
     return render_template('listarticles.html', posts=posts, temperature=temperature, city=city, apparent_temperature=apparent_temperature, description=description)
 
-@app.route("/login"):
-    def login():
-        return render_template('login.html')
+@app.route('/login')
+def login():
+    session['next'] = request.args.get('next')
+    return render_template('login.html')
+
+def is_safe_url(target):
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and \
+            ref_url.netloc == test_url.netloc
+
+@app.route('/logmein', methods=['POST'])
+def logmein():
+    username = request.form['username']
+
+    user = User.query.filter_by(username=username).first()
+
+    if not user:
+        return '<h1> User not found</h1>'
+
+    login_user(user)
+
+    if 'next' in session:
+        next = session['next']
+        if is_safe_url(next):
+            return redirect(next)
+
+    return '<h1>You are logged in!</h1>'
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return 'You are now logged out!'
 
 @app.route("/detailarticles/<int:pk>")
 def detail_articles(pk):
