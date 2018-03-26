@@ -21,7 +21,7 @@ POSTGRES = {
 app = Flask(__name__)  # create the application instance
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:%(pw)s@%(host)\
                                         s:%(port)s/%(db)s' % POSTGRES
-app.config['SECRET_KEY'] = 'thisissecret'
+app.config['SECRET_KEY'] = '4qNdpAmAhhD$PdKayyNevkh6@&X!@Z&#E%fE2hu5'
 app.config['USE_SESSION_FOR_NEXT'] = True
 
 db = SQLAlchemy(app)
