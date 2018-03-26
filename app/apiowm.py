@@ -35,6 +35,7 @@ def req_data(string):
 
 def get_data():
     meteo = weather_data('Paris,fr')
+    print(meteo['wind']['speed'])
     apparent_temperature = int(13.12 + 0.6215 * float(meteo['main']['temp'] - 273.15) - 11.37 * float(meteo['wind']['speed'] * 3.6) ** 0.16 + 0.3965 * float(meteo['main']['temp'] - 273.15) * float(meteo['wind']['speed'] * 3.6) ** 0.16)
     # -------------------------Connection to redis-------------------------- #
     r = redis.StrictRedis(host='localhost', port=6379, db=0)
