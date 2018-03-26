@@ -3,6 +3,12 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from urllib.parse import urlparse, urljoin
+from passlib.hash import sha256_crypt
+from flask_wtf import FlaskForm
+from flask_bootstrap import Bootstrap
+from wtforms import StringField, PasswordField, BooleanField
+from wtforms.validators import InputRequired, Email, Length
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import redis
 
@@ -19,7 +25,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:%(pw)s@%(host)\
                                         s:%(port)s/%(db)s' % POSTGRES
 app.config['SECRET_KEY'] = 'thisissecret'
 app.config['USE_SESSION_FOR_NEXT'] = True
-
+Bootstrap(app)
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
 login_manager = LoginManager()
@@ -34,9 +40,21 @@ class Postblog(db.Model):
     text = db.Column(db.Text)
     created_at = db.Column(db.DateTime)
 
+class LoginForm(FlaskForm):
+    username = StringField('username', validators=[InputRequired(), Length(min=3, max=15)])
+    password = PasswordField('password', validators=[InputRequired(), Length(min=6, max=80)])
+    remember = BooleanField('remember me')
+
+class RegisterForm(FlaskForm):
+    email = StringField('email', validators=[InputRequired(), Email(message='Invalid email'), Length(max=50)])
+    username = StringField('username', validators=[InputRequired(), Length(min  =3, max=15)])
+    password = PasswordField('password', validators=[InputRequired(), Length(min=6, max=80)])
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(30), unique=True)
+    username = db.Column(db.String(15), unique=True)
+    email = db.Column(db.String(50), unique=True)
+    password = db.Column(db.String(80))
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -64,6 +82,7 @@ class PostListAPIView(ma.Schema):
 
 
 @app.route('/api/v1.0/posts/', methods=['GET'])
+@login_required
 def get_posts():
     postlist = PostListAPIView(many=True)
     queryset = Postblog.query.all()
@@ -81,53 +100,64 @@ def list_articles():
     description = r.get('description')
     return render_template('listarticles.html', posts=posts, temperature=temperature, city=city, apparent_temperature=apparent_temperature, description=description)
 
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def login():
+    form = LoginForm()
+
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user:
+            if check_password_hash(user.password, form.password.data):
+                login_user(user, remember=form.remember.data)
+                return redirect(url_for('list_articles'))
+
+        return render_template('login.html', form=form)
+
     session['next'] = request.args.get('next')
-    return render_template('login.html')
+    return render_template('login.html', form=form)
+
 
 def is_safe_url(target):
     ref_url = urlparse(request.host_url)
     test_url = urlparse(urljoin(request.host_url, target))
-    return test_url.scheme in ('http', 'https') and \
-            ref_url.netloc == test_url.netloc
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
-@app.route('/logmein', methods=['POST'])
-def logmein():
-    username = request.form['username']
-
-    user = User.query.filter_by(username=username).first()
-
-    if not user:
-        return '<h1> User not found</h1>'
-
-    login_user(user)
-
-    if 'next' in session:
-        next = session['next']
-        if is_safe_url(next):
-            return redirect(next)
-
-    return '<h1>You are logged in!</h1>'
 
 @app.route("/logout")
 @login_required
 def logout():
     logout_user()
-    return 'You are now logged out!'
+    return redirect(url_for('list_articles'))
+
+@app.route("/register/", methods = ['GET','POST'])
+def register():
+    form = RegisterForm()
+
+    if form.validate_on_submit():
+        hashed_password = generate_password_hash(form.password.data, method='sha256')
+        new_user = User(username=form.username.data, email=form.email.data, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        return redirect(url_for('list_articles'))
+
+    return render_template('register.html', form=form)
+
 
 @app.route("/detailarticles/<int:pk>")
+@login_required
 def detail_articles(pk):
     post = Postblog.query.filter_by(id=pk).one()
     return render_template('detailarticles.html', post=post)
 
 
 @app.route("/createarticle/")
+@login_required
 def create_articles():
     return render_template('createarticle.html')
 
 
 @app.route("/createpost/", methods=['POST'])
+@login_required
 def create_post():
     title = request.form['title']
     subtitle = request.form['subtitle']
@@ -148,6 +178,7 @@ def create_post():
 
 
 @app.route("/editpost/<int:id>", methods=['GET', 'POST'])
+@login_required
 def edit_post(id):
     post = db.session.query(Postblog).filter(Postblog.id == id).first()
 
@@ -170,6 +201,7 @@ def edit_post(id):
 
 
 @app.route("/deletepost/<int:id>", methods=['POST'])
+@login_required
 def delete_post(id):
     post = db.session.query(Postblog).filter(Postblog.id == id).first()
     db.session.delete(post)
