@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from datetime import datetime
 import redis
 
@@ -15,10 +16,12 @@ POSTGRES = {
 app = Flask(__name__)  # create the application instance
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://%(user)s:%(pw)s@%(host)\
                                         s:%(port)s/%(db)s' % POSTGRES
+app.config['SECRET_KEY'] = 'thisissecret'
 
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
-
+login_manager = LoginManager()
+login_manager.init_app(app)
 
 class Postblog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -28,6 +31,13 @@ class Postblog(db.Model):
     text = db.Column(db.Text)
     created_at = db.Column(db.DateTime)
 
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(30), unique=True)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 class Weatherdb(db.Model):
     dateandtime = db.Column(db.DateTime, primary_key=True)
@@ -68,6 +78,9 @@ def list_articles():
     description = r.get('description')
     return render_template('listarticles.html', posts=posts, temperature=temperature, city=city, apparent_temperature=apparent_temperature, description=description)
 
+@app.route("/login"):
+    def login():
+        return render_template('login.html')
 
 @app.route("/detailarticles/<int:pk>")
 def detail_articles(pk):
